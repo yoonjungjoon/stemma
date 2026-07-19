@@ -10,12 +10,16 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "httpx>=0.28,<1",
+  "Jinja2>=3.1,<4",
   "jsonschema>=4.23,<5",
   "PyYAML>=6.0.2,<7",
+  "starlette>=1.0,<2",
+  "uvicorn>=0.34,<1",
 ]
 
 [project.scripts]
 docs-sync-exporter = "stemma.cli:main"
+docs-sync-catalog = "stemma.cli:main_catalog"
 
 [dependency-groups]
 dev = [

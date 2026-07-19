@@ -6,12 +6,17 @@ import pytest
 from conftest import inventory_document, write_yaml
 
 from stemma import (
+    Device,
     DeviceOS,
+    Folder,
     FolderMode,
+    Inventory,
     InventoryParseError,
     InventorySchemaError,
     InventorySemanticError,
+    Location,
     load_inventory,
+    validate_inventory,
 )
 
 
@@ -100,6 +105,29 @@ def test_rejects_unknown_device_reference(tmp_path: Path) -> None:
 
     assert raised.value.pointer == "/folders/0/locations/0/device_id"
     assert "unknown device" in raised.value.detail
+
+
+def test_public_validator_rejects_duplicate_device_in_domain_object() -> None:
+    inventory = Inventory(
+        schema_version="0.0.1",
+        devices=(
+            Device("DEVICE-A", "first", DeviceOS.LINUX),
+            Device("DEVICE-A", "second", DeviceOS.LINUX),
+        ),
+        folders=(
+            Folder(
+                "docs",
+                None,
+                (Location("DEVICE-A", "/srv/docs", FolderMode.SEND_RECEIVE),),
+            ),
+        ),
+    )
+
+    with pytest.raises(InventorySemanticError, match="duplicate device id") as raised:
+        validate_inventory(inventory)
+
+    assert raised.value.source == "inventory"
+    assert raised.value.pointer == "/devices/1/id"
 
 
 @pytest.mark.parametrize("invalid_path", ["relative/path", "/srv/../secret"])

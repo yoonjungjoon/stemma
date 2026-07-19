@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} {{ title }}{% endblock %}
+{% block content %}
+  <section class="error-page">
+    <p class="error-code">Error {{ status }}</p>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    {% if field %}<p>Field: <code>{{ field }}</code></p>{% endif %}
+    {% if allowed %}<p>Allowed values: <code>{{ allowed | join(', ') }}</code></p>{% endif %}
+    {% if request_id %}<p>Request ID: <code>{{ request_id }}</code></p>{% endif %}
+    <a href="/catalog">Return to catalog</a>
+  </section>
+{% endblock %}

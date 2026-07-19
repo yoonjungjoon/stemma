@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from .inventory import validate_inventory
 from .models import (
     ActualFolder,
     Catalog,
@@ -33,6 +34,7 @@ def reconcile(
 ) -> Catalog:
     """Compare every desired location with its actual folder, without I/O."""
 
+    validate_inventory(inventory)
     validate_snapshots(inventory, snapshots)
     devices_by_id = {device.id: device for device in inventory.devices}
     snapshots_by_device_id = {snapshot.device_id: snapshot for snapshot in snapshots}

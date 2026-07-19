@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+  <header class="page-header">
+    <div>
+      <h1>Local Docs Sync Catalog</h1>
+      <p>Read-only view of snapshot files prepared locally on this host.</p>
+    </div>
+  </header>
+
+  <section class="summary" aria-label="Catalog summary">
+    <div><strong>{{ page.summary.total }}</strong><span>Total</span></div>
+    <div><strong>{{ page.summary.in_sync }}</strong><span>In sync</span></div>
+    <div><strong>{{ page.summary.drifted }}</strong><span>Drifted</span></div>
+    <div><strong>{{ page.summary.missing }}</strong><span>Missing</span></div>
+    <div><strong>{{ page.summary.path_mismatch }}</strong><span>Path mismatch</span></div>
+    <div><strong>{{ page.summary.mode_mismatch }}</strong><span>Mode mismatch</span></div>
+    <div><strong>{{ page.summary.matching }}</strong><span>Matching</span></div>
+  </section>
+
+  <form class="filters" method="get" action="/catalog">
+    <label>Search
+      <input name="q" maxlength="200" value="{{ page.query.q or '' }}">
+    </label>
+    <label>Device
+      <select name="device_id">
+        <option value="">All devices</option>
+        {% for device in page.device_options %}
+          <option value="{{ device.id }}"{% if page.query.device_id == device.id %} selected{% endif %}>{{ device.name }} ({{ device.id }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>State
+      <select name="state">
+        <option value="">All states</option>
+        <option value="in_sync"{% if page.query.state and page.query.state.value == 'in_sync' %} selected{% endif %}>in_sync</option>
+        <option value="drifted"{% if page.query.state and page.query.state.value == 'drifted' %} selected{% endif %}>drifted</option>
+      </select>
+    </label>
+    <label>Drift
+      <select name="drift_kind">
+        <option value="">All drift kinds</option>
+        <option value="missing"{% if page.query.drift_kind and page.query.drift_kind.value == 'missing' %} selected{% endif %}>missing</option>
+        <option value="path_mismatch"{% if page.query.drift_kind and page.query.drift_kind.value == 'path_mismatch' %} selected{% endif %}>path_mismatch</option>
+        <option value="mode_mismatch"{% if page.query.drift_kind and page.query.drift_kind.value == 'mode_mismatch' %} selected{% endif %}>mode_mismatch</option>
+      </select>
+    </label>
+    <button type="submit">Filter</button>
+    <a href="/catalog">Reset filters</a>
+  </form>
+
+  {% if page.summary.total == 0 %}
+    <section class="empty-state"><h2>Catalog entry가 없습니다.</h2></section>
+  {% elif not page.rows %}
+    <section class="empty-state">
+      <h2>조건에 맞는 entry가 없습니다.</h2>
+      <a href="/catalog">Filter 초기화</a>
+    </section>
+  {% else %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Folder</th>
+            <th scope="col">Device</th>
+            <th scope="col">Desired path</th>
+            <th scope="col">Actual path</th>
+            <th scope="col">Desired mode</th>
+            <th scope="col">Actual mode</th>
+            <th scope="col">Drift</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in page.rows %}
+            <tr>
+              <td><span class="badge badge-{{ row.state }}">{{ row.state }}</span></td>
+              <td>{% if row.folder_label %}<strong>{{ row.folder_label }}</strong><br>{% endif %}<code>{{ row.folder_id }}</code></td>
+              <td><strong>{{ row.device_name }}</strong><br><code>{{ row.device_id }}</code></td>
+              <td><code class="path">{{ row.desired_path }}</code></td>
+              <td>{% if row.actual_path is none %}—{% else %}<code class="path">{{ row.actual_path }}</code>{% endif %}</td>
+              <td><code>{{ row.desired_mode }}</code></td>
+              <td>{% if row.actual_mode is none %}—{% else %}<code>{{ row.actual_mode }}</code>{% endif %}</td>
+              <td>
+                {% if row.drifts %}
+                  <ul class="drifts">
+                    {% for drift in row.drifts %}
+                      <li><strong>{{ drift.label }}</strong> <code>{{ drift.kind }}</code> <span>{{ drift.reason }}</span></li>
+                    {% endfor %}
+                  </ul>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}

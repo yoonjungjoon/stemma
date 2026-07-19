@@ -29,6 +29,20 @@ catalog = build_catalog(Path("inventory.yaml"), [Path("device-inventory.json")])
 catalog_json = serialize_catalog(catalog)
 ```
 
+PR4의 local read-only viewer는 operator가 현재 host에 미리 준비한 inventory와
+snapshot만 표시합니다. 중앙 snapshot 수집이나 장비 간 전송은 하지 않으며,
+인증이 없는 v0.0.1 server는 `127.0.0.1`에만 bind할 수 있습니다.
+
+```bash
+uv run docs-sync-catalog web \
+  --inventory ./inventory.yaml \
+  --snapshot ./device-inventory-a.json \
+  --snapshot ./device-inventory-b.json
+```
+
+실행 후 `http://127.0.0.1:8080/catalog`에서 folder/device별 desired/actual path와
+mode, `missing`/`path_mismatch`/`mode_mismatch` drift 및 filter를 확인할 수 있습니다.
+
 ## 개발 환경
 
 ```bash

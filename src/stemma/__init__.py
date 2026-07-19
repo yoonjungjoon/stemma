@@ -12,7 +12,7 @@ from .errors import (
     SnapshotSchemaError,
     SnapshotSemanticError,
 )
-from .inventory import load_inventory
+from .inventory import load_inventory, validate_inventory
 from .models import (
     ActualFolder,
     Catalog,
@@ -62,5 +62,6 @@ __all__ = [
     "normalize_path",
     "reconcile",
     "serialize_catalog",
+    "validate_inventory",
     "validate_snapshots",
 ]

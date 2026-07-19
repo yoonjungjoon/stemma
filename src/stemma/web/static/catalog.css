@@ -1,0 +1,40 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #172033;
+  background: #f4f6fa;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+.page-shell { width: min(1500px, 100%); margin: 0 auto; padding: 2rem; }
+.page-header { display: flex; justify-content: space-between; align-items: end; }
+.page-header h1 { margin-bottom: .35rem; }
+.page-header p { margin-top: 0; color: #566078; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .75rem; margin: 1.5rem 0; }
+.summary div { background: #fff; border: 1px solid #dce1eb; border-radius: .65rem; padding: 1rem; }
+.summary strong, .summary span { display: block; }
+.summary strong { font-size: 1.5rem; }
+.summary span { color: #626c82; margin-top: .2rem; }
+.filters { display: flex; flex-wrap: wrap; align-items: end; gap: .8rem; padding: 1rem; background: #fff; border: 1px solid #dce1eb; border-radius: .65rem; }
+.filters label { display: grid; gap: .3rem; font-weight: 650; }
+input, select, button { min-height: 2.4rem; border: 1px solid #aeb6c7; border-radius: .35rem; padding: .45rem .65rem; background: #fff; color: inherit; }
+button { background: #2056c7; border-color: #2056c7; color: #fff; font-weight: 700; cursor: pointer; }
+a { color: #174aa8; }
+.table-wrap { margin-top: 1.25rem; overflow-x: auto; background: #fff; border: 1px solid #dce1eb; border-radius: .65rem; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: .8rem; border-bottom: 1px solid #e4e8f0; text-align: left; vertical-align: top; }
+th { color: #47516a; background: #f9fafc; white-space: nowrap; }
+code.path { white-space: normal; overflow-wrap: anywhere; }
+.badge { display: inline-block; border-radius: 999px; padding: .25rem .55rem; font-weight: 750; }
+.badge-in_sync { color: #075a37; background: #d9f8e9; }
+.badge-drifted { color: #8a2d15; background: #ffe5dc; }
+.drifts { margin: 0; padding-left: 1.1rem; }
+.drifts li + li { margin-top: .4rem; }
+.empty-state, .error-page { margin-top: 1.25rem; padding: 2rem; text-align: center; background: #fff; border: 1px solid #dce1eb; border-radius: .65rem; }
+.error-code { color: #8a2d15; font-weight: 750; }
+
+@media (max-width: 700px) {
+  .page-shell { padding: 1rem; }
+  .filters { display: grid; }
+}

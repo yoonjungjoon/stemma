@@ -55,7 +55,7 @@ def load_inventory(path: Path) -> Inventory:
     )
     folders = tuple(_make_folder(item) for item in cast(list[dict[str, Any]], data["folders"]))
     inventory = Inventory(schema_version=data["schema_version"], devices=devices, folders=folders)
-    _validate_inventory(inventory, source=source)
+    validate_inventory(inventory, source=source)
     return inventory
 
 
@@ -71,7 +71,9 @@ def _make_folder(item: dict[str, Any]) -> Folder:
     return Folder(id=item["id"], label=item.get("label"), locations=locations)
 
 
-def _validate_inventory(inventory: Inventory, *, source: str) -> None:
+def validate_inventory(inventory: Inventory, *, source: str = "inventory") -> None:
+    """Validate cross-field and OS-specific invariants of an inventory domain object."""
+
     device_indexes: dict[str, int] = {}
     for index, device in enumerate(inventory.devices):
         if device.id in device_indexes:

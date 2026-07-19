@@ -16,6 +16,7 @@ from stemma import (
     Folder,
     FolderMode,
     Inventory,
+    InventorySemanticError,
     Location,
     SnapshotSemanticError,
     reconcile,
@@ -194,6 +195,42 @@ def test_rejects_unknown_and_duplicate_snapshot_before_indexing() -> None:
     duplicate = _snapshot(_actual())
     with pytest.raises(DuplicateSnapshotError):
         reconcile(_inventory(), [duplicate, duplicate])
+
+
+def test_rejects_duplicate_inventory_device_before_indexing() -> None:
+    inventory = Inventory(
+        schema_version="0.0.1",
+        devices=(
+            Device("DEVICE-A", "first", DeviceOS.LINUX),
+            Device("DEVICE-A", "second", DeviceOS.LINUX),
+        ),
+        folders=_inventory().folders,
+    )
+
+    with pytest.raises(InventorySemanticError, match="duplicate device id") as raised:
+        reconcile(inventory, [])
+
+    assert raised.value.source == "inventory"
+    assert raised.value.pointer == "/devices/1/id"
+
+
+def test_rejects_unknown_inventory_location_device_without_key_error() -> None:
+    inventory = Inventory(
+        schema_version="0.0.1",
+        devices=(Device("DEVICE-A", "server", DeviceOS.LINUX),),
+        folders=(
+            Folder(
+                "docs",
+                None,
+                (Location("DEVICE-X", "/srv/docs", FolderMode.SEND_RECEIVE),),
+            ),
+        ),
+    )
+
+    with pytest.raises(InventorySemanticError, match="unknown device") as raised:
+        reconcile(inventory, [])
+
+    assert raised.value.pointer == "/folders/0/locations/0/device_id"
 
 
 def test_reconciliation_is_deterministic_idempotent_and_does_not_mutate_inputs() -> None:
