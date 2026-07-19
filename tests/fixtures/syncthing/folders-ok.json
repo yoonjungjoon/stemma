@@ -1,0 +1,12 @@
+[
+  {
+    "id": "company-docs",
+    "label": "Company documents",
+    "path": "/srv/syncthing/company-docs",
+    "type": "sendreceive",
+    "paused": false,
+    "devices": [
+      {"deviceID": "DEVICE-B"}
+    ]
+  }
+]

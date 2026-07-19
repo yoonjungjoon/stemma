@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stemma.local/schemas/inventory-v0.0.1.schema.json",
+  "title": "Stemma inventory v0.0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "devices", "folders"],
+  "properties": {
+    "schema_version": {"const": "0.0.1"},
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "os"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"},
+          "name": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"},
+          "os": {"enum": ["linux", "darwin", "windows"]}
+        }
+      }
+    },
+    "folders": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "locations"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"},
+          "label": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"},
+          "locations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["device_id", "path", "mode"],
+              "properties": {
+                "device_id": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"},
+                "path": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"},
+                "mode": {
+                  "enum": ["sendreceive", "sendonly", "receiveonly", "receiveencrypted"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

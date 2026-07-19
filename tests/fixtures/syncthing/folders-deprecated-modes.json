@@ -1,0 +1,12 @@
+[
+  {
+    "id": "legacy-read-write",
+    "path": "/srv/syncthing/read-write",
+    "type": "readwrite"
+  },
+  {
+    "id": "legacy-read-only",
+    "path": "/srv/syncthing/read-only",
+    "type": "readonly"
+  }
+]
