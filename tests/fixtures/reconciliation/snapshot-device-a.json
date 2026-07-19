@@ -1,0 +1,17 @@
+{
+  "schema_version": "0.0.1",
+  "captured_at": "2026-07-19T13:00:00Z",
+  "device_id": "DEVICE-A",
+  "folders": [
+    {
+      "id": "company-docs",
+      "path": "/srv//docs/./",
+      "mode": "sendreceive"
+    },
+    {
+      "id": "actual-only",
+      "path": "/srv/actual-only",
+      "mode": "sendreceive"
+    }
+  ]
+}

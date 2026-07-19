@@ -1,5 +1,6 @@
 """Typed domain and input validation for the Stemma catalog."""
 
+from .catalog import build_catalog
 from .errors import (
     CatalogError,
     DuplicateSnapshotError,
@@ -28,6 +29,8 @@ from .models import (
     Location,
 )
 from .path_normalization import normalize_path
+from .reconciliation import reconcile
+from .serialization import serialize_catalog
 from .snapshot import load_snapshots, validate_snapshots
 
 __all__ = [
@@ -53,8 +56,11 @@ __all__ = [
     "SnapshotParseError",
     "SnapshotSchemaError",
     "SnapshotSemanticError",
+    "build_catalog",
     "load_inventory",
     "load_snapshots",
     "normalize_path",
+    "reconcile",
+    "serialize_catalog",
     "validate_snapshots",
 ]

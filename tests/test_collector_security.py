@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import httpx
 import pytest
@@ -12,6 +13,7 @@ from stemma.collectors import (
     SyncthingAuthenticationError,
     SyncthingClient,
     SyncthingHTTPError,
+    SyncthingResponseError,
 )
 
 _SECRET = "COLLECTOR-SECRET-API-KEY"
@@ -32,6 +34,45 @@ def _exception_graph_text(error: BaseException) -> str:
         if current.__context__ is not None:
             pending.append(current.__context__)
     return "\n".join(parts)
+
+
+def _object_graph_contains_secret(
+    value: object,
+    secret: str,
+    seen: set[int] | None = None,
+) -> bool:
+    visited: set[int] = set() if seen is None else seen
+    if id(value) in visited:
+        return False
+    visited.add(id(value))
+
+    if isinstance(value, str):
+        return secret in value
+    if isinstance(value, bytes):
+        return secret.encode() in value
+    if isinstance(value, httpx.Request):
+        return _object_graph_contains_secret(str(value.url), secret, visited) or (
+            _object_graph_contains_secret(tuple(value.headers.multi_items()), secret, visited)
+        )
+    if isinstance(value, BaseException):
+        related: tuple[object, ...] = (
+            value.args,
+            vars(value),
+            value.__cause__,
+            value.__context__,
+        )
+        return _object_graph_contains_secret(related, secret, visited)
+    if isinstance(value, dict):
+        mapping = cast(dict[object, object], value)
+        return any(
+            _object_graph_contains_secret(item, secret, visited)
+            for pair in mapping.items()
+            for item in pair
+        )
+    if isinstance(value, (list, tuple, set, frozenset)):
+        values = cast(list[object] | tuple[object, ...] | set[object] | frozenset[object], value)
+        return any(_object_graph_contains_secret(item, secret, visited) for item in values)
+    return False
 
 
 @pytest.mark.parametrize("status_code", [401, 500])
@@ -67,6 +108,31 @@ def test_raw_request_exception_is_not_retained() -> None:
     assert _SECRET not in _exception_graph_text(raised.value)
     assert raised.value.__cause__ is None
     assert raised.value.__context__ is None
+
+
+def test_malformed_content_encoding_does_not_retain_credential_request() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            headers={"Content-Encoding": "gzip"},
+            content=b"not-gzip",
+        )
+
+    client = SyncthingClient(api_key=_SECRET, transport=httpx.MockTransport(handler))
+    try:
+        with pytest.raises(SyncthingResponseError) as raised:
+            client.get_status()
+    finally:
+        client.close()
+
+    assert raised.value.detail == "response content encoding is invalid"
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+    assert _object_graph_contains_secret(requests[0], _SECRET)
+    assert not _object_graph_contains_secret(raised.value, _SECRET)
 
 
 @pytest.mark.parametrize(
@@ -161,3 +227,16 @@ def test_cli_has_no_api_key_option_and_fails_before_network(
     monkeypatch.setattr("sys.argv", ["docs-sync-exporter", "snapshot", f"--api-key={_SECRET}"])
     assert main() == 2
     assert _SECRET not in capsys.readouterr().err
+
+
+def test_cli_sanitizes_invalid_environment_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    invalid_key = "API-KEY-비밀-SENTINEL"
+    monkeypatch.setenv("SYNCTHING_API_KEY", invalid_key)
+
+    assert main(["snapshot"]) == 2
+    captured = capsys.readouterr()
+    assert "visible ASCII" in captured.err
+    assert invalid_key not in captured.err

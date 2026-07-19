@@ -225,11 +225,14 @@ def test_accepts_safe_base_urls(base_url: str) -> None:
         "http://127.0.0.1:8384#fragment",
         "http://127.0.0.1:8384/rest/config",
         "http://127.0.0.1:99999",
+        "https://example.com\x01:8384",
     ],
 )
 def test_rejects_unsafe_base_urls(base_url: str) -> None:
-    with pytest.raises(CollectorConfigurationError):
+    with pytest.raises(CollectorConfigurationError) as raised:
         _client(lambda request: httpx.Response(200), base_url=base_url)
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
 
 
 @pytest.mark.parametrize("timeout", [0.0, -1.0, float("inf"), float("nan")])
@@ -249,6 +252,38 @@ def test_requires_non_blank_api_key_before_request() -> None:
     with pytest.raises(CollectorConfigurationError):
         SyncthingClient(api_key="  ", transport=httpx.MockTransport(handler))
     assert called is False
+
+
+@pytest.mark.parametrize(
+    "api_key",
+    ["", " ", "KEY\tVALUE", "KEY\nVALUE", "KEY\x7fVALUE", "KEY-비밀"],
+)
+def test_rejects_non_visible_ascii_api_key_before_header_creation(api_key: str) -> None:
+    called = False
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal called
+        called = True
+        return httpx.Response(200)
+
+    with pytest.raises(CollectorConfigurationError) as raised:
+        SyncthingClient(api_key=api_key, transport=httpx.MockTransport(handler))
+
+    assert called is False
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+
+
+def test_non_ascii_api_key_is_not_echoed_in_configuration_error() -> None:
+    api_key = "API-KEY-비밀-SENTINEL"
+
+    with pytest.raises(CollectorConfigurationError) as raised:
+        SyncthingClient(api_key=api_key)
+
+    assert api_key not in str(raised.value)
+    assert api_key not in repr(raised.value)
+    assert api_key not in repr(raised.value.args)
+    assert api_key not in repr(vars(raised.value))
 
 
 def test_custom_ca_bundle_is_accepted_only_for_https() -> None:

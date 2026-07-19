@@ -67,8 +67,7 @@ class SyncthingClient:
         ca_bundle: Path | None = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        if not api_key.strip():
-            raise CollectorConfigurationError("SYNCTHING_API_KEY is required and must not be blank")
+        api_key = _validate_api_key(api_key)
         normalized_url, parsed = _validate_base_url(base_url)
         self._base_url = normalized_url
         self._host = cast(str, parsed.hostname)
@@ -133,6 +132,8 @@ class SyncthingClient:
 
         try:
             response = self._client.get(f"{self._base_url}{endpoint}")
+        except httpx.DecodingError:
+            return SyncthingResponseError(endpoint, "response content encoding is invalid")
         except httpx.ConnectTimeout:
             return SyncthingTimeoutError(endpoint, "connect", self._connect_timeout)
         except httpx.ReadTimeout:
@@ -156,20 +157,40 @@ class SyncthingClient:
 
 
 def _validate_base_url(base_url: str) -> tuple[str, SplitResult]:
-    if not base_url.strip() or any(character.isspace() for character in base_url):
-        raise CollectorConfigurationError("base URL must be a non-empty URL without whitespace")
+    if not base_url or any(
+        character.isspace() or not character.isprintable() for character in base_url
+    ):
+        raise CollectorConfigurationError(
+            "base URL must contain printable characters without whitespace"
+        )
+    parsed: SplitResult | None = None
+    port: int | None = None
+    hostname: str | None = None
+    username: str | None = None
+    password: str | None = None
     try:
-        parsed = urlsplit(base_url)
-        port = parsed.port
-    except ValueError:
-        raise CollectorConfigurationError("base URL has an invalid host or port") from None
+        candidate = urlsplit(base_url)
+        candidate_port = candidate.port
+        candidate_hostname = candidate.hostname
+        candidate_username = candidate.username
+        candidate_password = candidate.password
+    except (UnicodeError, ValueError):
+        pass
+    else:
+        parsed = candidate
+        port = candidate_port
+        hostname = candidate_hostname
+        username = candidate_username
+        password = candidate_password
+    if parsed is None:
+        raise CollectorConfigurationError("base URL has an invalid host or port")
 
     scheme = parsed.scheme.lower()
     if scheme not in {"http", "https"}:
         raise CollectorConfigurationError("base URL scheme must be http or https")
-    if parsed.hostname is None:
+    if hostname is None:
         raise CollectorConfigurationError("base URL must include a host")
-    if parsed.username is not None or parsed.password is not None:
+    if username is not None or password is not None:
         raise CollectorConfigurationError("base URL must not include credentials")
     if parsed.query or parsed.fragment:
         raise CollectorConfigurationError("base URL must not include a query or fragment")
@@ -178,15 +199,33 @@ def _validate_base_url(base_url: str) -> tuple[str, SplitResult]:
     if port is not None and not 1 <= port <= 65535:
         raise CollectorConfigurationError("base URL port must be between 1 and 65535")
 
-    host = parsed.hostname.lower()
+    host = hostname.lower()
     if scheme == "http" and host not in {"127.0.0.1", "::1"}:
         raise CollectorConfigurationError(
             "plain HTTP is allowed only for 127.0.0.1 or bracketed [::1]"
         )
 
     normalized = urlunsplit((scheme, parsed.netloc, "", "", ""))
+    urls_are_valid = True
+    try:
+        httpx.URL(f"{normalized}{_STATUS_ENDPOINT}")
+        httpx.URL(f"{normalized}{_FOLDERS_ENDPOINT}")
+    except (httpx.InvalidURL, UnicodeError):
+        urls_are_valid = False
+    if not urls_are_valid:
+        raise CollectorConfigurationError("base URL is not a valid HTTP URL")
     normalized_parsed = urlsplit(normalized)
     return normalized, normalized_parsed
+
+
+def _validate_api_key(api_key: str) -> str:
+    if not api_key:
+        raise CollectorConfigurationError("SYNCTHING_API_KEY is required and must not be blank")
+    if any(not 0x21 <= ord(character) <= 0x7E for character in api_key):
+        raise CollectorConfigurationError(
+            "SYNCTHING_API_KEY must contain visible ASCII characters only"
+        )
+    return api_key
 
 
 def _validate_timeout(value: float | int, name: str) -> float:
